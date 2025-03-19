@@ -1,7 +1,6 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Drawing;
@@ -10,99 +9,65 @@ namespace WinFormsApp1
 {
     public partial class Form1 : Form
     {
-        private Stopwatch stopwatch;
-        private Random random;
-        private bool waitingForClick = false;
-        private bool prematureClick = false;
-        private string username;
+        private Stopwatch cronometro = new Stopwatch();
+        private Random random = new Random();
+        private bool aspettaClick = false;
+        private bool inizioTest = false; // Per controllare se il test è in corso
         private string filePath;
-        private string userDirectory = "UserData";
-        private CancellationTokenSource cts; // Token per interrompere il timer
 
         public Form1()
         {
             InitializeComponent();
-            stopwatch = new Stopwatch();
-            random = new Random();
-
-            // Richiede il nome utente all'avvio
-            username = PromptUsername();
-            Directory.CreateDirectory(userDirectory); // Crea la cartella se non esiste
-            filePath = Path.Combine(userDirectory, $"{username}.txt");
+            string nomeUtente = Microsoft.VisualBasic.Interaction.InputBox("Inserisci il tuo nome utente:", "Nome Utente", "");
+            filePath = "UserData/" + nomeUtente + ".txt";
+            Directory.CreateDirectory("UserData");
 
             lblMessage.Text = "Premi START per iniziare";
-            this.BackColor = Color.White;
-            this.Click += new EventHandler(Form1_Click);
-        }
-
-        private string PromptUsername()
-        {
-            string input = "";
-            while (string.IsNullOrWhiteSpace(input))
-            {
-                input = Microsoft.VisualBasic.Interaction.InputBox("Inserisci il tuo nome utente:", "Nome Utente", "");
-            }
-            return input;
-        }
-
-        private void Form1_Click(object sender, EventArgs e)
-        {
-            if (prematureClick)
-            {
-                lblMessage.Text = "Hai cliccato troppo presto! Punteggio: -1000 ms. Premi START per riprovare.";
-                this.BackColor = Color.White;
-                btnStart.Enabled = true;
-                prematureClick = false;
-                waitingForClick = false;
-
-                // **Interrompi il timer se attivo**
-                cts?.Cancel();
-
-                // **Registra punteggio negativo**
-                string logEntry = $"{DateTime.Now}: -1000 ms (Click prematuro)\n";
-                File.AppendAllText(filePath, logEntry);
-            }
-            else if (waitingForClick)
-            {
-                stopwatch.Stop();
-                long reactionTime = stopwatch.ElapsedMilliseconds;
-                lblMessage.Text = $"Tempo di reazione: {reactionTime} ms";
-                this.BackColor = Color.White;
-                btnStart.Enabled = true;
-                waitingForClick = false;
-
-                // **Salva il tempo nel file**
-                string logEntry = $"{DateTime.Now}: {reactionTime} ms\n";
-                File.AppendAllText(filePath, logEntry);
-            }
+            BackColor = Color.White;
         }
 
         private async void StartTest()
         {
             btnStart.Enabled = false;
             lblMessage.Text = "Aspetta il verde...";
-            this.BackColor = Color.Red;
-            prematureClick = true;
-            waitingForClick = false;
+            BackColor = Color.Red;
+            inizioTest = true;
 
-            // **Nuovo token per gestire la cancellazione**
-            cts = new CancellationTokenSource();
-            int waitTime = random.Next(2000, 5000);
+            int attesa = random.Next(2000, 5000);
+            await Task.Delay(attesa);
 
-            try
-            {
-                await Task.Delay(waitTime, cts.Token); // Aspetta, ma si pu� interrompere
-            }
-            catch (TaskCanceledException)
-            {
-                return; // Se l'attesa viene interrotta, esce senza cambiare colore
-            }
+            if (inizioTest==false) return; // Se il test è stato annullato, esce
 
-            this.BackColor = Color.Green;
+            BackColor = Color.Green;
             lblMessage.Text = "PREMI ORA!";
-            stopwatch.Restart();
-            waitingForClick = true;
-            prematureClick = false;
+            cronometro.Restart();
+            aspettaClick = true;
+        }
+
+        private void Form1_Click(object sender, EventArgs e)
+        {
+            if (inizioTest==true && aspettaClick==false) // Se preme prima del verde
+            {
+                lblMessage.Text = "Troppo presto! -1000 ms";
+                File.AppendAllText(filePath, DateTime.Now.ToString() + ": -1000 ms (Click prematuro)\n");
+                ResetTest();
+            }
+            else if (aspettaClick==true) // Se preme nel momento giusto
+            {
+                cronometro.Stop();
+                long tempoMisurato = cronometro.ElapsedMilliseconds;
+                lblMessage.Text = "Tempo di reazione: " + tempoMisurato + " ms";
+                File.AppendAllText(filePath, DateTime.Now.ToString() + ": " + tempoMisurato + " ms\n");
+                ResetTest();
+            }
+        }
+
+        private void ResetTest()
+        {
+            BackColor = Color.White;
+            btnStart.Enabled = true;
+            aspettaClick = false;
+            inizioTest = false;
         }
 
         private void btnStart_Click(object sender, EventArgs e)

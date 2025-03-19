@@ -60,6 +60,7 @@
             Controls.Add(btnStart);
             Name = "Form1";
             Text = "Form1";
+            Click += Form1_Click;
             ResumeLayout(false);
             PerformLayout();
         }
