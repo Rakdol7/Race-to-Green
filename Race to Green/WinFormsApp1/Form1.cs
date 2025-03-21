@@ -4,6 +4,11 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Drawing;
+using System.Reflection.Metadata;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Collections;
 
 namespace WinFormsApp1
 {
@@ -14,14 +19,12 @@ namespace WinFormsApp1
         private bool aspettaClick = false;
         private bool inizioTest = false; // Per controllare se il test è in corso
         private string filePath;
+        private string nomeUtente;
 
         public Form1()
         {
             InitializeComponent();
-            string nomeUtente = Microsoft.VisualBasic.Interaction.InputBox("Inserisci il tuo nome utente:", "Nome Utente", "");
-            filePath = "UserData/" + nomeUtente + ".txt";
-            Directory.CreateDirectory("UserData");
-
+            nomeUtente = Microsoft.VisualBasic.Interaction.InputBox("Inserisci il tuo nome utente:", "Nome Utente", "");
             lblMessage.Text = "Premi START per iniziare";
             BackColor = Color.White;
         }
@@ -49,7 +52,10 @@ namespace WinFormsApp1
             if (inizioTest==true && aspettaClick==false) // Se preme prima del verde
             {
                 lblMessage.Text = "Troppo presto! -1000 ms";
-                File.AppendAllText(filePath, DateTime.Now.ToString() + ": -1000 ms (Click prematuro)\n");
+                var oStream = new FileStream(@"./"+ nomeUtente+".txt", FileMode.Append, FileAccess.Write, FileShare.Read);
+                StreamWriter sw = new StreamWriter(oStream);
+                sw.WriteLine(DateTime.Now.ToString() + ": -1000 ms (Click prematuro)\n");
+                sw.Close();
                 ResetTest();
             }
             else if (aspettaClick==true) // Se preme nel momento giusto
@@ -57,7 +63,10 @@ namespace WinFormsApp1
                 cronometro.Stop();
                 long tempoMisurato = cronometro.ElapsedMilliseconds;
                 lblMessage.Text = "Tempo di reazione: " + tempoMisurato + " ms";
-                File.AppendAllText(filePath, DateTime.Now.ToString() + ": " + tempoMisurato + " ms\n");
+                var oStream = new FileStream(@"./" + nomeUtente + ".txt", FileMode.Append, FileAccess.Write, FileShare.Read);
+                StreamWriter sw = new StreamWriter(oStream);
+                sw.WriteLine(DateTime.Now.ToString() + ": " + tempoMisurato + " ms\n");
+                sw.Close();
                 ResetTest();
             }
         }
